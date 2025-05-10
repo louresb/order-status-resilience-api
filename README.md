@@ -1,5 +1,7 @@
 # Order Status Resilience API
 
+![.NET Build](https://github.com/louresb/order-status-resilience-api/actions/workflows/dotnet-build.yml/badge.svg)
+
 This project demonstrates how to build a resilient .NET 8 API using `HttpClientFactory`, and [Polly](https://github.com/App-vNext/Polly) to handle instability in external services using proven resilience patterns.
 
 ## ✅ Purpose
