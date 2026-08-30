@@ -2,29 +2,32 @@ name: .NET Build
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "**" ]
+    branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build and Validate
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
 
-    - name: Restore dependencies
-      run: dotnet restore src/OrderStatusResilience.Api
+      - name: Restore dependencies
+        run: dotnet restore OrderStatusResilience.sln
 
-    - name: Build solution
-      run: dotnet build src/OrderStatusResilience.Api --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build OrderStatusResilience.sln --configuration Release --no-restore
 
-    - name: Confirm success
-      run: echo "Build completed successfully"
+      - name: Run tests
+        run: dotnet test OrderStatusResilience.sln --configuration Release --no-build

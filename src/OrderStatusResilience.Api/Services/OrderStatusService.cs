@@ -1,20 +1,13 @@
-﻿using OrderStatusResilience.Api.ExternalServices;
-using OrderStatusResilienceApi.ExternalServices;
+using OrderStatusResilience.Api.ExternalServices;
+using OrderStatusResilience.Api.Simulations;
 
-namespace OrderStatusResilienceApi.Services
+namespace OrderStatusResilience.Api.Services;
+
+public sealed class OrderStatusService(IExternalOrderStatusClient externalClient) : IOrderStatusService
 {
-    public class OrderStatusService : IOrderStatusService
-    {
-        private readonly IExternalOrderStatusClient _externalClient;
-
-        public OrderStatusService(IExternalOrderStatusClient externalClient)
-        {
-            _externalClient = externalClient;
-        }
-
-        public async Task<string> GetOrderStatusAsync(string orderId)
-        {
-            return await _externalClient.FetchStatusAsync(orderId);
-        }
-    }
+    public Task<ExternalOrderResult> GetStatusAsync(
+        string orderId,
+        SimulationScenario scenario,
+        CancellationToken cancellationToken) =>
+        externalClient.GetStatusAsync(orderId, scenario, cancellationToken);
 }
