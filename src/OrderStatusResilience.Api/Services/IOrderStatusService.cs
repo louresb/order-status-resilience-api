@@ -1,7 +1,12 @@
-﻿namespace OrderStatusResilienceApi.Services
+using OrderStatusResilience.Api.ExternalServices;
+using OrderStatusResilience.Api.Simulations;
+
+namespace OrderStatusResilience.Api.Services;
+
+public interface IOrderStatusService
 {
-    public interface IOrderStatusService
-    {
-        Task<string> GetOrderStatusAsync(string orderId);
-    }
+    Task<ExternalOrderResult> GetStatusAsync(
+        string orderId,
+        SimulationScenario scenario,
+        CancellationToken cancellationToken);
 }

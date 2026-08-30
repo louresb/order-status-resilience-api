@@ -1,26 +1,27 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
-namespace OrderStatusResilience.Api.Simulations
+namespace OrderStatusResilience.Api.Simulations;
+
+[ApiController]
+[Route("external/status")]
+public sealed class ExternalOrderSimulatorController(IExternalOrderSimulator simulator) : ControllerBase
 {
-    [ApiController]
-    [Route("external/status")]
-    public class ExternalOrderSimulatorController : ControllerBase
+    [HttpGet("{orderId}")]
+    [ProducesResponseType<SimulationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<SimulationResponse>(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType<SimulationResponse>(StatusCodes.Status504GatewayTimeout)]
+    public async Task<ActionResult<SimulationResponse>> GetStatus(
+        string orderId,
+        [FromQuery] SimulationScenario scenario = SimulationScenario.Success,
+        [FromQuery] string? operationId = null,
+        CancellationToken cancellationToken = default)
     {
-        private static readonly Random _random = new();
+        var response = await simulator.GetStatusAsync(
+            orderId,
+            scenario,
+            operationId ?? Guid.NewGuid().ToString("N"),
+            cancellationToken);
 
-        [HttpGet("{orderId}")]
-        public async Task<IActionResult> Get(string orderId)
-        {
-            await Task.Delay(_random.Next(100, 1000));
-
-            var shouldFail = _random.NextDouble() < 0.5;
-
-            if (shouldFail)
-            {
-                return StatusCode(500, "Simulated external system failure.");
-            }
-
-            return Ok($"Order {orderId}: delivered successfully.");
-        }
+        return StatusCode((int)response.StatusCode, response);
     }
 }

@@ -1,6 +1,24 @@
 @OrderStatusResilienceApi_HostAddress = http://localhost:5147
 
-GET {{OrderStatusResilienceApi_HostAddress}}/weatherforecast/
+GET {{OrderStatusResilienceApi_HostAddress}}/order/status/123?scenario=success
 Accept: application/json
 
 ###
+
+GET {{OrderStatusResilienceApi_HostAddress}}/order/status/123?scenario=transientFailure
+Accept: application/json
+
+###
+
+GET {{OrderStatusResilienceApi_HostAddress}}/order/status/123?scenario=persistentFailure
+Accept: application/json
+
+###
+
+GET {{OrderStatusResilienceApi_HostAddress}}/order/status/123?scenario=timeout
+Accept: application/json
+
+###
+
+GET {{OrderStatusResilienceApi_HostAddress}}/health
+Accept: application/json

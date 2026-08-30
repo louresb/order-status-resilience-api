@@ -1,32 +1,55 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using OrderStatusResilienceApi.Services;
+using Microsoft.AspNetCore.Mvc;
+using OrderStatusResilience.Api.ExternalServices;
+using OrderStatusResilience.Api.Services;
+using OrderStatusResilience.Api.Simulations;
 
-namespace OrderStatusResilienceApi.Controllers
+namespace OrderStatusResilience.Api.Controllers;
+
+[ApiController]
+[Route("order/status")]
+public sealed class OrderStatusController(IOrderStatusService orderStatusService) : ControllerBase
 {
-    [ApiController]
-    [Route("order")]
-    public class OrderStatusController : ControllerBase
+    [HttpGet("{orderId}")]
+    [ProducesResponseType<OrderStatusResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
+    public async Task<ActionResult<OrderStatusResponse>> GetStatus(
+        string orderId,
+        [FromQuery] SimulationScenario scenario = SimulationScenario.Success,
+        CancellationToken cancellationToken = default)
     {
-        private readonly IOrderStatusService _orderStatusService;
+        var result = await orderStatusService.GetStatusAsync(orderId, scenario, cancellationToken);
 
-        public OrderStatusController(IOrderStatusService orderStatusService)
+        if (result.IsSuccess)
         {
-            _orderStatusService = orderStatusService;
+            return Ok(new OrderStatusResponse(
+                result.OrderId,
+                result.Status!,
+                result.Attempts,
+                result.Scenario));
         }
 
-        [HttpGet("status/{orderId}")]
-        public async Task<IActionResult> GetStatus(string orderId)
+        var (statusCode, title) = result.Failure switch
         {
-            if (string.IsNullOrWhiteSpace(orderId))
-                return BadRequest("Order ID cannot be empty.");
+            ExternalOrderFailure.Timeout =>
+                (StatusCodes.Status504GatewayTimeout, "External order service timed out"),
+            ExternalOrderFailure.CircuitOpen =>
+                (StatusCodes.Status503ServiceUnavailable, "External order service circuit is open"),
+            _ =>
+                (StatusCodes.Status503ServiceUnavailable, "External order service is unavailable")
+        };
 
-            var status = await _orderStatusService.GetOrderStatusAsync(orderId);
+        var problem = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = result.Error
+        };
 
-            return Ok(new
-            {
-                orderId,
-                status
-            });
-        }
+        problem.Extensions["orderId"] = result.OrderId;
+        problem.Extensions["scenario"] = result.Scenario;
+        problem.Extensions["attempts"] = result.Attempts;
+
+        return StatusCode(statusCode, problem);
     }
 }

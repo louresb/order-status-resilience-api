@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderStatusResilience.Api", "src\OrderStatusResilience.Api\OrderStatusResilience.Api.csproj", "{582D562F-57C8-2917-5567-9F6CC34F56B2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderStatusResilience.Tests", "tests\OrderStatusResilience.Tests\OrderStatusResilience.Tests.csproj", "{D6B4BA8E-CEA9-420B-82C3-AB5772D48C9D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,12 +21,17 @@ Global
 		{582D562F-57C8-2917-5567-9F6CC34F56B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{582D562F-57C8-2917-5567-9F6CC34F56B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{582D562F-57C8-2917-5567-9F6CC34F56B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6B4BA8E-CEA9-420B-82C3-AB5772D48C9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6B4BA8E-CEA9-420B-82C3-AB5772D48C9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6B4BA8E-CEA9-420B-82C3-AB5772D48C9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6B4BA8E-CEA9-420B-82C3-AB5772D48C9D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{582D562F-57C8-2917-5567-9F6CC34F56B2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{D6B4BA8E-CEA9-420B-82C3-AB5772D48C9D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7BEAF693-7F2B-40E7-9E20-1E1C0A910BC8}

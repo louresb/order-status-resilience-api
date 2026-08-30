@@ -1,58 +1,81 @@
-﻿using System.Diagnostics;
-using OrderStatusResilienceApi.ExternalServices;
-using OrderStatusResilience.Api.Services;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.WebUtilities;
+using OrderStatusResilience.Api.Simulations;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
-namespace OrderStatusResilience.Api.ExternalServices
+namespace OrderStatusResilience.Api.ExternalServices;
+
+public sealed class ExternalOrderStatusClient(
+    HttpClient httpClient,
+    SimulationAttemptTracker attemptTracker,
+    ILogger<ExternalOrderStatusClient> logger) : IExternalOrderStatusClient
 {
-    public class ExternalOrderStatusClient : IExternalOrderStatusClient
+    public async Task<ExternalOrderResult> GetStatusAsync(
+        string orderId,
+        SimulationScenario scenario,
+        CancellationToken cancellationToken)
     {
-        private readonly HttpClient _httpClient;
-        private readonly ILogger<ExternalOrderStatusClient> _logger;
-        private readonly IRetryTracker _retryTracker;
+        var operationId = Guid.NewGuid().ToString("N");
+        var path = QueryHelpers.AddQueryString(
+            $"external/status/{Uri.EscapeDataString(orderId)}",
+            "scenario",
+            scenario.ToString());
 
-        public ExternalOrderStatusClient(HttpClient httpClient, ILogger<ExternalOrderStatusClient> logger, IRetryTracker retryTracker)
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.Add(SimulatedExternalOrderHandler.OperationIdHeader, operationId);
+
+        try
         {
-            _httpClient = httpClient;
-            _logger = logger;
-            _retryTracker = retryTracker;
-        }
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+            var payload = await response.Content.ReadFromJsonAsync<SimulationResponse>(cancellationToken);
+            var attempts = attemptTracker.Complete(operationId);
 
-        public async Task<string> FetchStatusAsync(string orderId)
-        {
-            var stopwatch = Stopwatch.StartNew();
-
-            var context = new Polly.Context();
-            context["orderId"] = orderId;
-
-            HttpResponseMessage response;
-
-            try
+            if (response.IsSuccessStatusCode && payload is not null)
             {
-                response = await _httpClient.GetAsync($"/external/status/{orderId}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while performing request to {OrderId}", orderId);
-                throw;
+                logger.LogInformation(
+                    "Order {OrderId} resolved after {Attempts} attempt(s) in scenario {Scenario}",
+                    orderId,
+                    attempts,
+                    scenario);
+
+                return new ExternalOrderResult(
+                    orderId,
+                    payload.Status.Status,
+                    attempts,
+                    scenario,
+                    ExternalOrderFailure.None);
             }
 
-            stopwatch.Stop();
-
-            _logger.LogInformation(
-                "Request to /external/status/{OrderId} took {Duration}ms",
+            return new ExternalOrderResult(
                 orderId,
-                stopwatch.ElapsedMilliseconds
-            );
-
-            int attempts = _retryTracker.GetAttempts(orderId);
-            _logger.LogInformation("Total retry attempts for {OrderId}: {Attempts}", orderId, attempts);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return $"Failed to retrieve status for order {orderId}";
-            }
-
-            return await response.Content.ReadAsStringAsync();
+                null,
+                attempts,
+                scenario,
+                ExternalOrderFailure.DependencyUnavailable,
+                payload?.Error ?? "The external order service is unavailable.");
         }
+        catch (TimeoutRejectedException)
+        {
+            return Failure(ExternalOrderFailure.Timeout, "The external order service timed out.");
+        }
+        catch (BrokenCircuitException)
+        {
+            return Failure(ExternalOrderFailure.CircuitOpen, "The circuit is open for the external order service.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            attemptTracker.Complete(operationId);
+            throw;
+        }
+
+        ExternalOrderResult Failure(ExternalOrderFailure failure, string error) =>
+            new(
+                orderId,
+                null,
+                attemptTracker.Complete(operationId),
+                scenario,
+                failure,
+                error);
     }
 }
